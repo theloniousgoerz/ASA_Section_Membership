@@ -1,0 +1,143 @@
+---
+title: "ASA Section Membership Exploratory Analysiss"
+author: "Thelonious Goerz"
+date: "2023-07-02"
+output: html_document
+---
+
+## Which subject areas of sociological research are the most popular?
+
+This is an interesting question for two reasons: 1) it provides insight about the questions and phenomena that gain the most prominence in the field. 2) analyzing historical trends in membership allows researchers to understand the growth in or maintenance of popularity of different topics within the discipline. Both of these questions aid in reexamination and study of the production of sociological research questions. Crucially, it can also illuminate gaps in current sociological study that deserve more attention. Ahead of the 2023 meeting, I thought I would compile this exploratory document to provide insight about section membership. I examine trends in topical section membership for the 53 current sections of the American Sociological Association (ASA).
+
+***Note***: These visualizations are a work in progress. 
+
+### Data
+
+Data on ASA section membership were obtained from the [ASA](https://www.asanet.org/communities-and-sections/sections/section-membership-data/) website. The data were downloaded in .pdf form and read in to `R` for processing. Section data were scraped using the `tabulizer` package and processed for use in this document. Details and code for this procedure are in the `DataPrep.R` file in this repository.
+
+### Descriptive statistics
+
+In this section, I display summary statistics of section membership for all 53 sections between 2008-2022 arranged by mean section rank by membership count.
+
+```{r Setup, echo = F, message =F}
+rm(list = ls())
+library(tidyverse)
+library(readr)
+library(RColorBrewer)
+library(forcats)
+
+```
+
+```{r Data, echo = F, message=F}
+
+Data <- read_csv("../Data/Processed/ASAprocessed.csv")
+
+
+# Data Prep
+
+Data %<>%
+  arrange(desc(MembershipCount)) %>%
+  group_by(Year) %>%
+  # Create Yearly Rank
+  mutate(Rank = row_number()) %>% 
+  arrange(Year) %>% 
+  ungroup() %>% 
+  mutate(Started = ifelse(is.na(MembershipCount),0,1))
+
+```
+
+```{r Descriptive Statistics}
+# %%%%%%%%%%%%%%%%%
+# Create a descriptive table with average membership counts (2008-2022) for each section. 
+# %%%%%%%%%%%%%%%%%
+
+Desc_1 <- Data %>%
+  group_by(SectionName) %>%
+  summarise("Mean Members" = round(mean(MembershipCount, na.rm = T),2), 
+            "SD Members" = round(sd(MembershipCount,na.rm = T),2),
+            "Min Members" = min(MembershipCount, na.rm = T),
+            "Max Members" = max(MembershipCount,na.rm = T), 
+            "Mean Rank" = round(mean(Rank, na.rm = T),2)) %>% 
+  arrange(`Mean Rank`) %>%
+  knitr::kable()
+
+Desc_1
+
+
+```
+
+The top five ranked sections on average are not surprising. Unsurprisingly, the top five represent questions about race, class, politics, collective behavior, the economy, and theory, which are core lines of inquiry in sociology, 
+
+### Visualizing historical membership
+
+In the figure below, I present a variety of visualizations of interesting trends in the membership data. Firstly, I display a bar chart representing the most recent (five years) data on the top ten ASA sections by membership. 
+
+```{r 2018-22 Membership Barplot, fig.align='center'}
+# %%%%%%%%%%%%%%%%%
+# Create a plot that shows the membership counts of the top 10 sections in the past five years. 
+# Sections are color-coded with a legend at the bottom and faceted.
+# %%%%%%%%%%%%%%%%%
+Plot_1 <- Data %>% 
+  group_by(Year) %>% 
+  filter(Rank <11 & Year %in% c(2018:2022)) %>%
+  ggplot(aes(fct_reorder(SectionName,
+                         MembershipCount),
+                         MembershipCount, 
+                         fill = SectionName)) + 
+  geom_col() +
+  facet_wrap(~Year) + 
+  theme_bw() + 
+  scale_fill_brewer(palette = "RdYlBu") +
+  theme(
+       plot.title = element_text(family = "Palatino", size =12),
+       plot.subtitle = element_text(family = "Palatino"),
+       axis.title.x = element_text(family = "Palatino", size = 10),
+       axis.title.y = element_text(family = "Palatino", size = 10),
+       axis.text.x = element_blank(),
+       legend.text = element_text(family = "Palatino", size = 7),
+       legend.position= c(0.85, 0.2),
+       legend.key.size = unit(.20,"cm")
+       ) + 
+       guides(
+       fill=guide_legend(title="")) +
+       labs(x = "ASA Section",
+       y = "Yearly Membership Count",
+       title = "Membership numbers to major topics of interest to sociologists remain stable",
+       subtitle = "Top 10 ASA Sections by Membership Count (2018-2022)  \n Data source: American Sociological Association Website"
+       )
+
+Plot_1
+
+```
+
+# 2022 Membership 
+
+In the figure below, I plot the 2022 membership counts of ASA sections. Of the top sections, only two surpass a thousand members. These two sections "Race, Gender, and Class" and "Sociology of Sex and Gender" both unsurprisingly are focused on major identity categories at the center of sociological research. Next, there are a handful of sections between 750-1000 members, then a sizable mass between 500-750, then the rest of the sections fall below 500 members each. 
+
+```{r 2022 Membership Barplot, fig.align='center'}
+# Create a plot ranking the sections by membership in 2022 
+Data %>% 
+  filter(Year == 2022) %>% 
+  ggplot(aes(x = fct_reorder(SectionName, MembershipCount), y = MembershipCount)) + 
+  geom_col() + coord_flip() + 
+  theme_bw() + 
+  theme(
+       plot.title = element_text(family = "Palatino", size =12),
+       plot.subtitle = element_text(family = "Palatino"),
+       axis.title.x = element_text(family = "Palatino", size = 10),
+       axis.title.y = element_text(family = "Palatino", size = 10),
+       legend.text = element_text(family = "Palatino", size = 7),
+       legend.position= c(0.85, 0.2),
+       legend.key.size = unit(.20,"cm")
+       ) + 
+       guides(
+       fill=guide_legend(title="")) +
+       labs(x = "ASA Section",
+       y = "Yearly Membership Count",
+       title = "2022 ASA Section Membership Counts",
+       subtitle = "Data source: American Sociological Association Website"
+       )
+
+```
+
+
